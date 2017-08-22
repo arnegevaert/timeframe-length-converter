@@ -20,13 +20,29 @@ function convert_timeframe_length() {
   console.log(filenames);
   for (let i = 0; i < filenames.length; i++) {
     const filename = filenames[i];
-    console.log(filename);
     const raw = fs.readFileSync(source + filename, "utf8");
     const triples = parser.parse(raw);
-    console.log(t.graph, t.subject, t.predicate, t.object);
+    let generatedAt = [];
+    let measurements = [];
     triples.forEach((t) => {
-    })
+      if (t.predicate === 'http://www.w3.org/ns/prov#generatedAtTime') {
+        generatedAt.push(t);
+      } else {
+        measurements.push(t);
+      }
+    });
+    measurements.forEach((t) => console.log(t.graph));
   }
+}
+
+function get_triples_for_timestamp(literal) {
+  const ts = get_timestamp_from_literal(literal);
+
+  // Search appropriate triples by checking if subject ends with timestamp
+}
+
+function get_timestamp_from_literal(literal) {
+  // Extract raw timestamp from literal
 }
 
 function check_args() {
