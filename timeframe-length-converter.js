@@ -22,27 +22,38 @@ function convert_timeframe_length() {
     const filename = filenames[i];
     const raw = fs.readFileSync(source + filename, "utf8");
     const triples = parser.parse(raw);
-    let generatedAt = [];
-    let measurements = [];
+    const generatedAt = [];
+    const measurements = [];
     triples.forEach((t) => {
       if (t.predicate === 'http://www.w3.org/ns/prov#generatedAtTime') {
         generatedAt.push(t);
+        get_triples_for_timestamp(t.object, measurements);
       } else {
         measurements.push(t);
       }
     });
-    measurements.forEach((t) => console.log(t.graph));
   }
 }
 
-function get_triples_for_timestamp(literal) {
+function get_triples_for_timestamp(literal, triples) {
   const ts = get_timestamp_from_literal(literal);
+  const result = [];
+  console.log(literal);
+  console.log('======================================================================');
+  triples.forEach(t => {
+    if (get_timestamp_from_graph(t.graph) === ts) {
+      console.log(t.graph);
+    }
+  });
+  console.log();
+}
 
-  // Search appropriate triples by checking if subject ends with timestamp
+function get_timestamp_from_graph(graph) {
+  return graph.substring(graph.length-19, graph.length);
 }
 
 function get_timestamp_from_literal(literal) {
-  // Extract raw timestamp from literal
+  return literal.substring(1, 20);
 }
 
 function check_args() {
