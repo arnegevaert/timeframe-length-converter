@@ -12,27 +12,38 @@ convert_timeframe_length();
 
 function convert_timeframe_length() {
   const filenames = fs.readdirSync(source).sort();
-  const parser = N3.Parser();
 
   let start = -1;
   let generatedAt = {file: [], buffer: [], overflow: []};
   let measurements = {file: [], buffer: [], overflow: []};
   for (let i = 0; i < filenames.length; i++) {
     const filename = filenames[i];
-    const raw = fs.readFileSync(source + filename, "utf8");
-    const triples = parser.parse(raw);
+    process_file(filename, generatedAt, measurements, start);
+  }
+}
 
-    triples.forEach(t => {
-      if (t.predicate === 'http://www.w3.org/ns/prov#generatedAtTime') {
-        generatedAt.file.push(t);
-      } else {
-        measurements.file.push(t);
-      }
-    });
+function process_file(filename, generatedAt, measurements, start) {
+  const parser = N3.Parser();
+  const raw = fs.readFileSync(source + filename, "utf8");
+  console.log('parsing...');
+  const triples = parser.parse(raw);
 
-    let reachedBorder = false;
-    generatedAt.file.forEach(t => {
+  console.log('splitting...');
+  triples.forEach(t => {
+    if (t.predicate === 'http://www.w3.org/ns/prov#generatedAtTime') {
+      generatedAt.file.push(t);
+    } else {
+      measurements.file.push(t);
+    }
+  });
+
+  let reachedBorder = false;
+  let counter = 0;
+  console.log('Traversing generatedAt...');
+  generatedAt.file.forEach(t => {
+    if (!reachedBorder) {
       let ts = moment(util.get_timestamp_from_literal(t.object)).unix();
+      counter++;
       if (start === -1) {
         let rest = ts % (length * 60);
         start = ts - rest;
@@ -47,42 +58,34 @@ function convert_timeframe_length() {
         });
       } else {
         reachedBorder = true;
-        generatedAt.overflow.push(t);
-        util.get_triples_for_timestamp(t.object, measurements.file).forEach(t => {
-          measurements.overflow.push(t);
-        });
       }
-    });
-
-    if (reachedBorder) {
-      let out_filename = start.toString();
-      console.log(out_filename);
-      console.log('===============');
-      measurements.buffer.forEach(t => console.log(t.graph, t.subject, t.predicate, t.object));
-      console.log();
-
-      // Serialize buffers to file
-
-      // Re-initialize buffers with overflow buffer content
-      generatedAt.file = generatedAt.overflow;
-      measurements.file = measurements.overflow;
-      generatedAt.buffer = [];
-      measurements.buffer = [];
-      generatedAt.overflow = [];
-      measurements.overflow = [];
-
-      console.log('overflow: generatedAt');
-      console.log('=====================');
-      generatedAt.file.forEach(t => console.log(t.graph, t.subject, t.predicate, t.object));
-      console.log('overflow: measurements');
-      console.log('======================');
-      measurements.file.forEach(t => console.log(t.graph, t.subject, t.predicate, t.object));
-      console.log();
-
-      start = -1;
-    } else {
-      generatedAt.file = [];
-      measurements.file = [];
     }
+  });
+
+  if (reachedBorder) {
+    console.log('filtering...');
+    generatedAt.overflow = generatedAt.file.filter(x => generatedAt.buffer.indexOf(x) === -1);
+    measurements.overflow = measurements.file.filter(x => measurements.buffer.indexOf(x) === -1);
+    console.log('writing...');
+    let out_filename = start.toString();
+    let writer = N3.Writer();
+    writer.addTriples(measurements.buffer);
+    writer.addTriples(generatedAt.buffer);
+    writer.end((error, result) => fs.writeFileSync(dest + out_filename, result));
+
+    // Re-initialize buffers with overflow buffer content
+    generatedAt.file = generatedAt.overflow;
+    measurements.file = measurements.overflow;
+    generatedAt.buffer = [];
+    measurements.buffer = [];
+    generatedAt.overflow = [];
+    measurements.overflow = [];
+    start = -1;
+    if (generatedAt.file.length !== 0) {
+      process_file(filename, generatedAt, measurements, start);
+    }
+  } else {
+    generatedAt.file = [];
+    measurements.file = [];
   }
 }
