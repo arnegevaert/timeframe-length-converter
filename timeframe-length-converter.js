@@ -1,5 +1,6 @@
 const fs = require('fs');
 const N3 = require('n3');
+const moment = require('moment');
 
 // Check arg count
 if (process.argv.length !== 5) {
@@ -27,7 +28,6 @@ function convert_timeframe_length() {
     triples.forEach((t) => {
       if (t.predicate === 'http://www.w3.org/ns/prov#generatedAtTime') {
         generatedAt.push(t);
-        get_triples_for_timestamp(t.object, measurements);
       } else {
         measurements.push(t);
       }
@@ -38,14 +38,12 @@ function convert_timeframe_length() {
 function get_triples_for_timestamp(literal, triples) {
   const ts = get_timestamp_from_literal(literal);
   const result = [];
-  console.log(literal);
-  console.log('======================================================================');
   triples.forEach(t => {
     if (get_timestamp_from_graph(t.graph) === ts) {
-      console.log(t.graph);
+      result.push(t);
     }
   });
-  console.log();
+  return result;
 }
 
 function get_timestamp_from_graph(graph) {
