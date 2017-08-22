@@ -14,17 +14,14 @@ check_args();
 convert_timeframe_length();
 
 function convert_timeframe_length() {
-  // While there is SOURCE data:
+  const filenames = fs.readdirSync(source).sort();
 
-    // Read LENGTH minutes of SOURCE data
-
-    // Determine filename of DEST file
-
-    // Serialize data to DEST
+  filenames.forEach((filename) => {
+    // TODO
+  });
 }
 
 function check_args() {
-  // Check SOURCE readable and DEST writable
   fs.stat(source, (err, stats) => {
     if (err) {
       console.error('Directory does not exist: ' + source);

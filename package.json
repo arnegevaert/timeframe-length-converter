@@ -1,0 +1,13 @@
+{
+  "license": "MIT",
+  "name": "timeframe-length-converter",
+  "description": "A tool to convert the timeframe length of LOD historic data (see github.com/oSoc17/smartflanders-backend)",
+  "author": "Arne Gevaert <arnegevaert@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "github.com/oSoc17/smartflanders-backend"
+  },
+  "dependencies": {
+    "n3": "^0.11.1"
+  }
+}
