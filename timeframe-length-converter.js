@@ -1,4 +1,5 @@
 const fs = require('fs');
+const N3 = require('n3');
 
 // Check arg count
 if (process.argv.length !== 5) {
@@ -15,10 +16,17 @@ convert_timeframe_length();
 
 function convert_timeframe_length() {
   const filenames = fs.readdirSync(source).sort();
-
-  filenames.forEach((filename) => {
-    // TODO
-  });
+  const parser = N3.Parser();
+  console.log(filenames);
+  for (let i = 0; i < filenames.length; i++) {
+    const filename = filenames[i];
+    console.log(filename);
+    const raw = fs.readFileSync(source + filename, "utf8");
+    const triples = parser.parse(raw);
+    console.log(t.graph, t.subject, t.predicate, t.object);
+    triples.forEach((t) => {
+    })
+  }
 }
 
 function check_args() {
