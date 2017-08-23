@@ -58,9 +58,6 @@ function process_file(filename, config) {
         meas = config.measurements.triples[config.measurements.index];
         added = true;
       }
-      if (!added) {
-        console.log("Added no triples!")
-      }
       config.generatedAt.index++;
     } else {
       reachedBorder = true;
@@ -73,11 +70,7 @@ function process_file(filename, config) {
     let writeMeas = config.measurements.triples.splice(0, config.measurements.index);
     let writeGenAt = config.generatedAt.triples.splice(0, config.generatedAt.index);
     writer.addTriples(writeGenAt);
-    writer.addTriples(writeMeas); console.log('meas: ', config.measurements.index);
-    if (config.measurements.index === 294) {
-      console.log(config.measurements.triples.length);
-      console.log(writeMeas.length);
-    }
+    writer.addTriples(writeMeas);
     writer.end((error, result) => fs.writeFileSync(dest + out_filename, result));
 
     config.generatedAt.index = 0;
