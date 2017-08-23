@@ -29,7 +29,7 @@ exports.process_args = function(argv) {
   const source = argv[3];
   const dest = argv[4];
 
-  fs.stat(source, (err, stats) => {
+  fs.statSync(source, (err, stats) => {
     if (err) {
       console.error('Directory does not exist: ' + source);
       process.exit(1);
@@ -40,7 +40,7 @@ exports.process_args = function(argv) {
     }
   });
 
-  fs.access(dest, fs.W_OK, (err) => {
+  fs.accessSync(dest, fs.W_OK, (err) => {
     if(err){
       console.error(dest + ' is not a writable directory');
       process.exit(1);
