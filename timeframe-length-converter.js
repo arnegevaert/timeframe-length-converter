@@ -71,6 +71,7 @@ function process_file(filename, config) {
     let writeGenAt = config.generatedAt.triples.splice(0, config.generatedAt.index);
     writer.addTriples(writeGenAt);
     writer.addTriples(writeMeas);
+    console.log('Writing file: ', out_filename);
     writer.end((error, result) => fs.writeFileSync(dest + out_filename, result));
 
     config.generatedAt.index = 0;
