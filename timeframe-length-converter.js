@@ -13,87 +13,79 @@ convert_timeframe_length();
 function convert_timeframe_length() {
   const filenames = fs.readdirSync(source).sort();
 
-  let start = -1;
-  let generatedAt = {file: [], buffer: [], overflow: []};
-  let measurements = {file: [], buffer: [], overflow: []};
+  let config = {
+    start: -1,
+    generatedAt: {triples: [], index: 0},
+    measurements: {triples: [], index: 0},
+    triples: [],
+    recursive: false
+  };
   for (let i = 0; i < filenames.length; i++) {
     const filename = filenames[i];
-    start = process_file(filename, generatedAt, measurements, start, false);
+    config.recursive = false;
+    process_file(filename, config);
   }
 }
 
-function process_file(filename, generatedAt, measurements, start, recursive, triples) {
+function process_file(filename, config) {
   const parser = N3.Parser();
   const raw = fs.readFileSync(source + filename, "utf8");
-  if (triples === undefined) {
-    console.log('parsing...');
-    triples = parser.parse(raw);
-  }
 
-  if (!recursive) {
-    console.log('splitting...');
-    triples.forEach(t => {
+  if (!config.recursive) {
+    config.triples = parser.parse(raw);
+    config.triples.forEach(t => {
       if (t.predicate === 'http://www.w3.org/ns/prov#generatedAtTime') {
-        generatedAt.file.push(t);
+        config.generatedAt.triples.push(t);
       } else {
-        measurements.file.push(t);
+        config.measurements.triples.push(t);
       }
     });
   }
 
   let reachedBorder = false;
-  let counter = 0;
-  //generatedAt.file.forEach(t => {
-  let index = 0;
-  console.log('Traversing generatedAt...', generatedAt.file.length);
-  while(!reachedBorder && index < generatedAt.file.length) {
-    let t = generatedAt.file[index];
+  while(!reachedBorder && config.generatedAt.index < config.generatedAt.triples.length) {
+    let t = config.generatedAt.triples[config.generatedAt.index];
     let ts = moment(util.get_timestamp_from_literal(t.object)).unix();
-    counter++;
-    if (start === -1) {
-      let rest = ts % (length * 60);
-      start = ts - rest;
-      generatedAt.buffer.push(t);
-      util.get_triples_for_timestamp(t.object, measurements.file).forEach(t => {
-        measurements.buffer.push(t);
-      });
-    } else if (ts - start < length*60) {
-      generatedAt.buffer.push(t);
-      util.get_triples_for_timestamp(t.object, measurements.file).forEach(t => {
-        measurements.buffer.push(t);
-      });
+    if (config.start === -1 || ts - config.start < length*60) {
+      if (config.start === -1) {
+        let rest = ts % (length * 60);
+        config.start = ts - rest;
+      }
+      let added = false;
+      let meas = config.measurements.triples[config.measurements.index];
+      while(meas !== undefined && (meas.predicate === 'rdf:type' || meas.predicate === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' || moment(util.get_timestamp_from_graph(meas.graph)).unix() <= ts)) {
+        config.measurements.index++;
+        meas = config.measurements.triples[config.measurements.index];
+        added = true;
+      }
+      if (!added) {
+        console.log("Added no triples!")
+      }
+      config.generatedAt.index++;
     } else {
       reachedBorder = true;
     }
-    index++;
   }
-  //});
 
   if (reachedBorder) {
-    console.log('filtering...');
-    generatedAt.overflow = generatedAt.file.filter(x => generatedAt.buffer.indexOf(x) === -1);
-    measurements.overflow = measurements.file.filter(x => measurements.buffer.indexOf(x) === -1);
-    console.log('writing...');
-    let out_filename = start.toString();
+    let out_filename = config.start.toString();
     let writer = N3.Writer();
-    writer.addTriples(measurements.buffer);
-    writer.addTriples(generatedAt.buffer);
+    let writeMeas = config.measurements.triples.splice(0, config.measurements.index);
+    let writeGenAt = config.generatedAt.triples.splice(0, config.generatedAt.index);
+    writer.addTriples(writeGenAt);
+    writer.addTriples(writeMeas); console.log('meas: ', config.measurements.index);
+    if (config.measurements.index === 294) {
+      console.log(config.measurements.triples.length);
+      console.log(writeMeas.length);
+    }
     writer.end((error, result) => fs.writeFileSync(dest + out_filename, result));
 
-    // Re-initialize buffers with overflow buffer content
-    generatedAt.file = generatedAt.overflow;
-    measurements.file = measurements.overflow;
-    generatedAt.buffer = [];
-    measurements.buffer = [];
-    generatedAt.overflow = [];
-    measurements.overflow = [];
-    start = -1;
-    if (generatedAt.file.length !== 0) {
-      process_file(filename, generatedAt, measurements, start, true, triples);
+    config.generatedAt.index = 0;
+    config.measurements.index = 0;
+    config.start = -1;
+    if (config.generatedAt.triples.length !== 0) {
+      config.recursive = true;
+      process_file(filename, config);
     }
-  } else {
-    generatedAt.file = [];
-    measurements.file = [];
   }
-  return start;
 }
